@@ -2,10 +2,6 @@ name: Validate presets
 
 on:
   pull_request:
-    paths:
-      - "presets/**"
-      - "scripts/**"
-      - ".github/**"
   push:
     branches: [main]
 
