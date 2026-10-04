@@ -25,6 +25,7 @@ FORBIDDEN_NESTED = {("appearance", "fonts"), ("bar", "weather")}
 
 ABS_PATH = re.compile(r"^(/|~|[A-Za-z]:[\\/]|file:)")
 CMD_SUBST = re.compile(r"(\$\(|`)")
+URL = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 
 MAGIC = {
     ".png": [b"\x89PNG\r\n\x1a\n"],
@@ -67,6 +68,9 @@ def check_value_strings(report, path, data):
         for item in candidates:
             if ABS_PATH.match(item):
                 report.error(path, f"absolute path in {trail}: {item[:60]!r}. Export the preset again from the shell.")
+                return
+            if URL.match(item):
+                report.error(path, f"URL in {trail}: presets must not load anything from the internet")
                 return
             if CMD_SUBST.search(item):
                 report.error(path, f"command substitution in {trail}")
