@@ -6,30 +6,33 @@ Presets are plain files. Nothing is collected from anyone: the shell only downlo
 
 ## Share your preset
 
-1. In the shell open Dashboard → Presets, pick your preset and press **Export**. This creates a `.zip` in `~/.config/illogical-impulse/presets/`. The export already removes personal paths, API keys, commands and any setting that is not visual.
-2. Unzip it into a folder named after the preset. The result must look like this:
+Everything you upload is **public**: the preset, its images (wallpaper, avatar, banner) and the preview. Only upload images you own or are free to share, and make sure the preview does not show personal data.
 
-   ```
-   presets/MyPreset/
-     MyPreset.json
-     meta.json
-     wallpaper.jpg
-     ...other images
-   ```
+1. In the shell open Dashboard → Presets and open one of your presets.
+2. Press **Upload**. A file picker asks for a **preview image**, a screenshot of your desktop. Pick it.
+3. The shell prepares a clean folder (personal paths, keys and anything that runs commands are removed) and opens three things: the folder, this repository's upload page and a notification.
+4. Drag the folder into the GitHub page and press **Propose changes**, then **Create pull request**. GitHub makes the fork for you, no git needed.
+5. A check validates the pull request. When a maintainer merges it, the preset appears in everyone's gallery.
 
-3. Add a `preview.png` (a screenshot of your desktop) and, optionally, `preview-lock.png`, then list them in `meta.json`:
+To update a preset you already shared, do the same steps with the same name. The pull request will replace its files.
 
-   ```json
-   {
-     "preview": "preview.png",
-     "screenshots": ["preview-lock.png"],
-     "wallpapers": ["wallpaper.jpg"]
-   }
-   ```
+### Without the Upload button
 
-4. Open a pull request. On GitHub you can do everything from the browser: **Add file → Upload files**, drop the folder inside `presets/`, and GitHub creates the fork and the PR for you.
+Export the preset as a ZIP, unzip it into `presets/<name>/`, add your `preview.png` and list it in `meta.json`:
 
-A check runs on every pull request. If it fails, the log tells you which file and why.
+```json
+{
+  "preview": "preview.png",
+  "screenshots": [],
+  "wallpapers": ["wallpaper.jpg"]
+}
+```
+
+Then open the pull request the same way.
+
+## How the shell uses this repository
+
+The shell lists the folders inside `presets/` and shows `preview.png` as the cover. Nothing is installed or run when browsing. When someone presses **Download**, the shell copies the preset's files to their cache and applies only visual settings. No data is sent to anyone: the shell only reads public files from GitHub.
 
 ## Rules the check enforces
 
