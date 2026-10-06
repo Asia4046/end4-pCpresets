@@ -12,6 +12,7 @@ except ImportError:
 ROOT = Path(__file__).resolve().parent.parent
 PRESETS = ROOT / "presets"
 
+AUTHOR_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$")
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$")
 ASSET_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_FILE = 10 * 1024 * 1024
@@ -217,7 +218,11 @@ def check_preset(report, folder):
             report.error(meta_json, "meta.json must be a JSON object")
             return
         for trail, value in strings(meta):
-            if value and "/" in value or "\\" in value:
+            if trail == ".author":
+                if not AUTHOR_RE.match(value):
+                    report.error(meta_json, "author must be a GitHub user name")
+                continue
+            if value and ("/" in value or "\\" in value):
                 report.error(meta_json, f"{trail} must be a file name, not a path")
             elif value and value not in names:
                 report.error(meta_json, f"{trail} points to '{value}' which is not in the folder")
