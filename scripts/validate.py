@@ -31,7 +31,8 @@ ALLOWED_TOP = {
 }
 ALLOWED_HYPRLAND = {"decoration", "gaps", "animations", "general"}
 FORBIDDEN_NESTED = {("appearance", "fonts"), ("bar", "weather")}
-PRIVATE_KEYS = {"clipboardPins", "clipboardpins", "apiKey", "token", "password", "secret"}
+PRIVATE_KEYS = {"clipboardPins", "clipboardpins"}
+CREDENTIAL_KEY = re.compile(r"^(.*api[-_]?key|secret|password|token|username|e-?mail)$", re.I)
 
 ABS_PATH = re.compile(r"^(/|~|[A-Za-z]:[\\/]|file:)")
 CMD_SUBST = re.compile(r"(\$\(|`)")
@@ -93,6 +94,16 @@ def keys(node, trail=""):
             yield from keys(value, f"{trail}[{i}]")
 
 
+def entries(node, trail=""):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield f"{trail}.{key}", str(key), value
+            yield from entries(value, f"{trail}.{key}")
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            yield from entries(value, f"{trail}[{i}]")
+
+
 def check_value_strings(report, path, data):
     pairs = list(strings(data)) + list(keys(data))
     for trail, value in pairs:
@@ -132,9 +143,11 @@ def check_config(report, path, data):
     for parent, child in FORBIDDEN_NESTED:
         if isinstance(data.get(parent), dict) and child in data[parent]:
             report.error(path, f"key '{parent}.{child}' is not allowed in shared presets")
-    for trail, key in keys(data):
+    for trail, key, value in entries(data):
         if key in PRIVATE_KEYS:
             report.error(path, f"key '{trail.lstrip('.')}' holds private data and cannot be shared")
+        elif CREDENTIAL_KEY.match(key) and value not in ("", None, "[unset]"):
+            report.error(path, f"key '{trail.lstrip('.')}' looks like a credential and cannot be shared")
     nodes = shape(data)
     if nodes is None:
         report.error(path, f"settings are nested deeper than {MAX_DEPTH} levels")
