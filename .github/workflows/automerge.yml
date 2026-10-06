@@ -57,7 +57,8 @@ jobs:
 
       - name: Enable automerge
         if: steps.decide.outputs.trusted == 'true' && steps.decide.outputs.clean == 'true'
-        run: gh pr merge "$PR" --repo "$REPO" --auto --squash
+        run: |
+          gh pr merge "$PR" --repo "$REPO" --auto --squash || gh pr merge "$PR" --repo "$REPO" --squash
 
       - name: Ask for a review
         if: steps.decide.outputs.trusted != 'true' && steps.decide.outputs.clean == 'true'
