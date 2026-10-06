@@ -58,14 +58,14 @@ def main():
         fail("missing PR_AUTHOR")
     if AUTHOR == REPO_OWNER:
         return
-    changed = [p for p in out(["git", "diff", "--name-only", "--no-renames", f"origin/{BASE}...HEAD"]).splitlines() if p]
+    changed = [p for p in out(["git", "diff", "--name-only", "--no-renames", "-z", f"origin/{BASE}...HEAD"]).split("\0") if p]
     outside = [p for p in changed if not p.startswith("presets/") or p.count("/") < 2]
     if outside:
         fail("this PR changes files outside presets/<name>/: " + ", ".join(outside))
     folders = sorted({p.split("/")[1] for p in changed})
     if len(folders) > 1:
         fail("one preset per pull request: " + ", ".join(folders))
-    existing = [p.split("/")[1] for p in out(["git", "ls-tree", "--name-only", f"origin/{BASE}", "presets/"]).splitlines()]
+    existing = [p.split("/")[1] for p in out(["git", "ls-tree", "--name-only", "-z", f"origin/{BASE}", "presets/"]).split("\0") if p]
     for folder in folders:
         clash = [e for e in existing if e.lower() == folder.lower() and e != folder]
         if clash:
