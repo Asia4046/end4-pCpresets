@@ -16,20 +16,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Only presets/ may change
-        if: github.event_name == 'pull_request' && github.event.pull_request.author_association != 'OWNER'
+      - name: Use the scripts from main
+        if: github.event_name == 'pull_request'
         run: |
-          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          outside=$(echo "$changed" | grep -v '^presets/' || true)
-          if [ -n "$outside" ]; then
-            echo "::error::This PR changes files outside presets/:"
-            echo "$outside"
-            exit 1
-          fi
+          git fetch origin "${{ github.base_ref }}"
+          git checkout "origin/${{ github.base_ref }}" -- scripts
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Install Pillow
+        run: python3 -m pip install --quiet pillow
+
+      - name: Check who changes what
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.repository }}
+        run: python3 scripts/check_pr.py
 
       - name: Validate presets
         run: python3 scripts/validate.py

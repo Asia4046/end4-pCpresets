@@ -4,6 +4,11 @@ import re
 import sys
 from pathlib import Path
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 ROOT = Path(__file__).resolve().parent.parent
 PRESETS = ROOT / "presets"
 
@@ -13,6 +18,9 @@ MAX_FILE = 10 * 1024 * 1024
 MAX_PRESET = 30 * 1024 * 1024
 MAX_FILES = 40
 MAX_JSON = 300 * 1024
+MAX_DEPTH = 8
+MAX_NODES = 4000
+MAX_PIXELS = 7680 * 4320
 
 ALLOWED_TOP = {
     "appearance", "background", "bar", "calendar", "crosshair", "dock", "interactions",
@@ -56,8 +64,36 @@ def strings(node, trail=""):
         yield trail, node
 
 
+def shape(node, depth=1):
+    if depth > MAX_DEPTH:
+        return None
+    count = 1
+    children = []
+    if isinstance(node, dict):
+        children = list(node.values())
+    elif isinstance(node, list):
+        children = node
+    for child in children:
+        inner = shape(child, depth + 1)
+        if inner is None:
+            return None
+        count += inner
+    return count
+
+
+def keys(node, trail=""):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield f"{trail}.{key}", str(key)
+            yield from keys(value, f"{trail}.{key}")
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            yield from keys(value, f"{trail}[{i}]")
+
+
 def check_value_strings(report, path, data):
-    for trail, value in strings(data):
+    pairs = list(strings(data)) + list(keys(data))
+    for trail, value in pairs:
         candidates = [value]
         if value.lstrip().startswith("{"):
             try:
@@ -94,6 +130,13 @@ def check_config(report, path, data):
     for parent, child in FORBIDDEN_NESTED:
         if isinstance(data.get(parent), dict) and child in data[parent]:
             report.error(path, f"key '{parent}.{child}' is not allowed in shared presets")
+    nodes = shape(data)
+    if nodes is None:
+        report.error(path, f"settings are nested deeper than {MAX_DEPTH} levels")
+        return
+    if nodes > MAX_NODES:
+        report.error(path, f"settings have too many entries ({nodes} > {MAX_NODES})")
+        return
     check_value_strings(report, path, data)
 
 
@@ -104,6 +147,16 @@ def check_asset(report, path):
         report.error(path, "file content does not match its image extension")
     elif ext == ".webp" and head[8:12] != b"WEBP":
         report.error(path, "file content does not match its image extension")
+    elif Image is not None:
+        try:
+            with Image.open(path) as image:
+                width, height = image.size
+                if width * height > MAX_PIXELS:
+                    report.error(path, f"image is larger than {MAX_PIXELS // 1000000} megapixels")
+                    return
+                image.load()
+        except Exception:
+            report.error(path, "image cannot be decoded")
 
 
 def check_preset(report, folder):
@@ -175,6 +228,12 @@ def main():
     for item in PRESETS.iterdir():
         if item.is_file() and not item.name.startswith("."):
             report.error(item, "presets/ must only contain preset folders")
+    seen = {}
+    for item in sorted(PRESETS.iterdir()):
+        if item.is_dir():
+            other = seen.setdefault(item.name.lower(), item.name)
+            if other != item.name:
+                report.error(item, f"name clashes with '{other}' when case is ignored")
     for folder in folders:
         if not folder.is_dir():
             report.error(folder, "not a folder")

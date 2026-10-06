@@ -1,0 +1,66 @@
+name: Automerge presets
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      AUTHOR: ${{ github.event.pull_request.user.login }}
+      MIN_MERGED: "2"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Decide
+        id: decide
+        run: |
+          trusted=false
+          owner=$(echo "${REPO%%/*}" | tr A-Z a-z)
+          if [ "${AUTHOR,,}" = "$owner" ]; then
+            trusted=true
+          fi
+          if jq -e --arg a "${AUTHOR,,}" '.trusted | map(ascii_downcase) | index($a)' trusted.json >/dev/null; then
+            trusted=true
+          fi
+          if [ "$trusted" = false ]; then
+            merged=$(gh api -X GET search/issues -f q="repo:${REPO} is:pr is:merged author:${AUTHOR}" --jq .total_count)
+            if [ "${merged:-0}" -ge "$MIN_MERGED" ]; then
+              trusted=true
+            fi
+          fi
+          files=$(gh api --paginate "repos/${REPO}/pulls/${PR}/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          clean=true
+          while IFS= read -r f; do
+            case "$f" in
+              presets/*/*) ;;
+              *) clean=false ;;
+            esac
+          done <<< "$files"
+          folders=$(echo "$files" | cut -d/ -f2 | sort -u | wc -l)
+          if [ "$folders" -ne 1 ]; then
+            clean=false
+          fi
+          echo "trusted=$trusted" >> "$GITHUB_OUTPUT"
+          echo "clean=$clean" >> "$GITHUB_OUTPUT"
+
+      - name: Enable automerge
+        if: steps.decide.outputs.trusted == 'true' && steps.decide.outputs.clean == 'true'
+        run: gh pr merge "$PR" --repo "$REPO" --auto --squash
+
+      - name: Ask for a review
+        if: steps.decide.outputs.trusted != 'true' && steps.decide.outputs.clean == 'true'
+        run: |
+          gh label create needs-review --repo "$REPO" --color FBCA04 --description "Waiting for a maintainer" 2>/dev/null || true
+          gh pr edit "$PR" --repo "$REPO" --add-label needs-review

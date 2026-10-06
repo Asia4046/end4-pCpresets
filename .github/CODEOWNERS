@@ -1,1 +1,4 @@
-* @pctrade
+/.github/ @pctrade
+/scripts/ @pctrade
+/trusted.json @pctrade
+/README.md @pctrade

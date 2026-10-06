@@ -50,7 +50,7 @@ An image you already have is never copied twice, and nothing of yours is overwri
 2. Press **Upload**. A file picker asks for a **preview image**. Pick a screenshot of your desktop.
 3. The shell prepares a clean folder and opens three things: the folder, this repository's upload page and a notification.
 4. Drag the folder into the GitHub page, press **Propose changes** and then **Create pull request**. GitHub makes the fork for you, no git needed.
-5. A check validates the pull request. When a maintainer merges it, the preset appears in everyone's gallery.
+5. A check validates the pull request. If you already have two accepted presets, it merges by itself once the check passes. Otherwise a maintainer reviews it first. Either way, the preset then appears in everyone's gallery.
 
 To update a preset you already shared, repeat the steps with the same name. The pull request replaces its files.
 
@@ -105,6 +105,8 @@ python3 scripts/validate.py
 | Settings | Only visual settings. Keys that run commands (`apps`, `custom`, `hacks`, `policies`, `conflictKiller`) and most of `hyprland` are rejected. Decoration, gaps, animations and general are allowed |
 | Values | No absolute paths (`/home/you/...`), no URLs (`https://...`) and no command substitution |
 | `meta.json` | May only name files that exist in the folder |
+| Images | Must decode as real images, up to 8K |
+| Pull request | One preset per pull request, only inside `presets/<name>/`. A preset can only be changed or deleted by the person who first added it. Names that differ only by case are rejected |
 
 ## Remove or report a preset
 
@@ -113,6 +115,8 @@ python3 scripts/validate.py
 
 ## Maintainers
 
+- Pull requests from the owner or from authors listed in `trusted.json` (or with two merged pull requests) get auto-merge enabled once the check passes. Everyone else gets the `needs-review` label.
+- Repository settings needed: **Allow auto-merge** on, and the `validate` check required by the ruleset.
 - Review the **Files changed** tab. The check blocks pull requests from others that touch anything outside `presets/`, but a green check does not replace looking at the previews.
-- `main` is protected by a ruleset: a pull request is required and the `Validate presets` check must pass.
+- `main` is protected by a ruleset: a pull request is required and the `validate` check must pass.
 - Never merge a pull request that changes `.github/` or `scripts/` unless you wrote it.
