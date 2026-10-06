@@ -30,6 +30,7 @@ ALLOWED_TOP = {
 }
 ALLOWED_HYPRLAND = {"decoration", "gaps", "animations", "general"}
 FORBIDDEN_NESTED = {("appearance", "fonts"), ("bar", "weather")}
+PRIVATE_KEYS = {"clipboardPins", "clipboardpins", "apiKey", "token", "password", "secret"}
 
 ABS_PATH = re.compile(r"^(/|~|[A-Za-z]:[\\/]|file:)")
 CMD_SUBST = re.compile(r"(\$\(|`)")
@@ -130,6 +131,9 @@ def check_config(report, path, data):
     for parent, child in FORBIDDEN_NESTED:
         if isinstance(data.get(parent), dict) and child in data[parent]:
             report.error(path, f"key '{parent}.{child}' is not allowed in shared presets")
+    for trail, key in keys(data):
+        if key in PRIVATE_KEYS:
+            report.error(path, f"key '{trail.lstrip('.')}' holds private data and cannot be shared")
     nodes = shape(data)
     if nodes is None:
         report.error(path, f"settings are nested deeper than {MAX_DEPTH} levels")
