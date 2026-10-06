@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 
@@ -31,6 +32,27 @@ def first_author(folder):
     return logins[-1].lower()
 
 
+def meta_author(text):
+    try:
+        value = json.loads(text).get("author", "")
+    except (ValueError, AttributeError):
+        return ""
+    return value.lower() if isinstance(value, str) else ""
+
+
+def base_owner(folder):
+    try:
+        shown = out(["git", "show", f"origin/{BASE}:presets/{folder}/meta.json"])
+    except subprocess.CalledProcessError:
+        shown = ""
+    return meta_author(shown) or first_author(folder)
+
+
+def head_author(folder):
+    path = Path("presets") / folder / "meta.json"
+    return meta_author(path.read_text(encoding="utf-8")) if path.is_file() else ""
+
+
 def main():
     if not AUTHOR:
         fail("missing PR_AUTHOR")
@@ -48,8 +70,11 @@ def main():
         clash = [e for e in existing if e.lower() == folder.lower() and e != folder]
         if clash:
             fail(f"'{folder}' clashes with the existing preset '{clash[0]}'")
-        if folder in existing and first_author(folder) != AUTHOR:
+        if folder in existing and base_owner(folder) != AUTHOR:
             fail(f"'{folder}' belongs to someone else and can only be changed by its author")
+        claimed = head_author(folder) if os.path.isdir(f"presets/{folder}") else ""
+        if claimed and claimed != AUTHOR:
+            fail(f"meta.json of '{folder}' must say \"author\": \"{AUTHOR}\"")
 
 
 main()
