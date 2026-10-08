@@ -47,7 +47,7 @@
     },
     "enableWallpaperPreview": true,
     "hideWhenFullscreen": true,
-    "lockWall": "solar-system.png",
+    "lockWall": "solar-system.jpg",
     "parallax": {
       "autoVertical": false,
       "enableSidebar": false,
@@ -147,7 +147,7 @@
       },
       "imageCard": {
         "enable": true,
-        "path": "lore.jpg",
+        "path": "lore.webp",
         "placementStrategy": "free",
         "sizeMode": "1x2",
         "x": 24,
