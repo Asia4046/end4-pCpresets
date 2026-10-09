@@ -147,7 +147,7 @@
       },
       "imageCard": {
         "enable": false,
-        "path": "lore.jpg",
+        "path": "lore.webp",
         "placementStrategy": "free",
         "sizeMode": "1x2",
         "x": 24,
